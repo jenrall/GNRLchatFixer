@@ -1,0 +1,6 @@
+name: GNRLChatFixer
+main: ChatFixer\Main
+version: 1.0.0
+api: [5.0.0]
+author: GNRLFlawless
+description: Blocks spam/server auto-messages from chat
