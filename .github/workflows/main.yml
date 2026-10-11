@@ -27,8 +27,7 @@ jobs:
       - name: Download DevTools source
         run: |
           git clone --depth 1 https://github.com/pmmp/DevTools.git /tmp/DevTools
-          ls -la /tmp/DevTools/
-          ls -la /tmp/DevTools/src/
+          ls -la /tmp/DevTools/src/ConsoleScript.php
 
       - name: Prepare plugin folder
         run: |
@@ -43,12 +42,12 @@ jobs:
           echo "=== Files ready ==="
           ls -la /tmp/build/ChatFixer/
 
-      - name: Build PHAR with ConsoleScript
+      - name: Build PHAR
         run: |
-          cd /tmp/DevTools
-          php -dphar.readonly=0 src/ConsoleScript.php \
-            --make /tmp/build/ChatFixer \
-            --out /tmp/build/ChatFixer.phar
+          cd /tmp/build
+          php -dphar.readonly=0 /tmp/DevTools/src/ConsoleScript.php \
+            --make ChatFixer \
+            --out ChatFixer.phar
           echo "=== Build result ==="
           ls -la /tmp/build/
 
