@@ -1,16 +1,12 @@
 # ===== ChatFixer Config =====
 
-# زمان (به ثانیه) که پیام تکراری سرور توش مسدود میشه
-# اگه کنسول هر 10 ثانیه پیام بفرسته، این رو 15 یا بیشتر بذار
+# Time (in seconds) during which duplicate server messages are blocked.
 duplicate-window-seconds: 10
 
-# مسدود کردن کامل پیام‌های کنسول
-# true = همه پیام‌های کنسول مسدود بشن (چیزی از کنسول تو چت نمیاد)
-# false = فقط پیام‌های تکراری کنسول مسدود بشن
+# Block ALL console messages from reaching chat.
 block-console-messages: true
 
-# اسم‌هایی که به عنوان کنسول/سرور شناسایی میشن
-# اگه پلاگین خاصی اسم دیگه‌ای استفاده می‌کنه، اینجا اضافه کن
+# Sender names that are treated as console / server.
 console-sender-names:
   - ""
   - "CONSOLE"
@@ -21,7 +17,6 @@ console-sender-names:
   - "System"
   - "SYSTEM"
 
-# الگوهای Regex برای مسدود کردن پیام‌های خاص
-# فقط روی پیام‌های سرور/کنسول اعمال میشه
+# Regex patterns to block specific server messages.
 blocked-patterns:
   # - "/^\[Server\]/i"
