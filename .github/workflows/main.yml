@@ -24,10 +24,11 @@ jobs:
           extensions: mbstring, gd, zip, yaml
           coverage: none
 
-      - name: Download DevTools
+      - name: Download DevTools source
         run: |
-          curl -L -o /tmp/DevTools.phar https://github.com/pmmp/DevTools/releases/latest/download/DevTools.phar
-          ls -la /tmp/DevTools.phar
+          git clone --depth 1 https://github.com/pmmp/DevTools.git /tmp/DevTools
+          ls -la /tmp/DevTools/
+          ls -la /tmp/DevTools/src/
 
       - name: Prepare plugin folder
         run: |
@@ -39,18 +40,15 @@ jobs:
             --exclude='pmmp' \
             --exclude='*.phar' \
             ./ /tmp/build/ChatFixer/
-
-      - name: List files to build
-        run: |
-          echo "=== Files in build folder ==="
+          echo "=== Files ready ==="
           ls -la /tmp/build/ChatFixer/
-          echo "=== plugin.yml check ==="
-          cat /tmp/build/ChatFixer/plugin.yml
 
-      - name: Build PHAR with DevTools
+      - name: Build PHAR with ConsoleScript
         run: |
-          cd /tmp/build
-          php -dphar.readonly=0 /tmp/DevTools.phar --make ChatFixer --out ChatFixer.phar
+          cd /tmp/DevTools
+          php -dphar.readonly=0 src/ConsoleScript.php \
+            --make /tmp/build/ChatFixer \
+            --out /tmp/build/ChatFixer.phar
           echo "=== Build result ==="
           ls -la /tmp/build/
 
@@ -67,7 +65,5 @@ jobs:
         with:
           files: /tmp/build/ChatFixer.phar
           generate_release_notes: true
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
