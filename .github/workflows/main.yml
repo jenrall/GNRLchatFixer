@@ -21,67 +21,53 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: mbstring, gd, zip, yaml, pthreads
-          tools: composer
+          extensions: mbstring, gd, zip, yaml
           coverage: none
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
 
       - name: Download DevTools
         run: |
-          mkdir -p build
-          curl -L -o build/DevTools.phar https://github.com/pmmp/DevTools/releases/latest/download/DevTools.phar
-
-      - name: Setup PocketMine-MP
-        run: |
-          mkdir -p pmmp
-          curl -L -o pmmp/PocketMine-MP.phar https://github.com/pmmp/PocketMine-MP/releases/latest/download/PocketMine-MP.phar
-          curl -L -o pmmp/start.sh https://raw.githubusercontent.com/pmmp/PocketMine-MP/stable/start.sh
-          chmod +x pmmp/start.sh
+          curl -L -o /tmp/DevTools.phar https://github.com/pmmp/DevTools/releases/latest/download/DevTools.phar
+          ls -la /tmp/DevTools.phar
 
       - name: Prepare plugin folder
         run: |
-          mkdir -p pmmp/plugins
-          cp -r . pmmp/plugins/ChatFixer
-          rm -rf pmmp/plugins/ChatFixer/.git
-          rm -rf pmmp/plugins/ChatFixer/.github
-          rm -rf pmmp/plugins/ChatFixer/pmmp
-          rm -rf pmmp/plugins/ChatFixer/build
+          mkdir -p /tmp/build/ChatFixer
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='build' \
+            --exclude='pmmp' \
+            --exclude='*.phar' \
+            ./ /tmp/build/ChatFixer/
+
+      - name: List files to build
+        run: |
+          echo "=== Files in build folder ==="
+          ls -la /tmp/build/ChatFixer/
+          echo "=== plugin.yml check ==="
+          cat /tmp/build/ChatFixer/plugin.yml
 
       - name: Build PHAR with DevTools
         run: |
-          cd pmmp
-          php PocketMine-MP.phar --no-wizard --disable-ansi --enable-dev-debug
-          # DevTools command to build plugin
-          echo "Building plugin..."
-          # Use DevTools directly
-          php -dphar.readonly=0 ../build/DevTools.phar --make plugins/ChatFixer --out plugins/ChatFixer.phar
-
-      - name: List built files
-        run: ls -la pmmp/plugins/
+          cd /tmp/build
+          php -dphar.readonly=0 /tmp/DevTools.phar --make ChatFixer --out ChatFixer.phar
+          echo "=== Build result ==="
+          ls -la /tmp/build/
 
       - name: Upload PHAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: ChatFixer-PHAR
-          path: pmmp/plugins/ChatFixer.phar
+          path: /tmp/build/ChatFixer.phar
           if-no-files-found: error
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: pmmp/plugins/ChatFixer.phar
+          files: /tmp/build/ChatFixer.phar
           generate_release_notes: true
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
