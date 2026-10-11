@@ -24,7 +24,7 @@ jobs:
           extensions: mbstring, gd, zip, yaml
           coverage: none
 
-      - name: Download DevTools source
+      - name: Download DevTools
         run: |
           git clone --depth 1 https://github.com/pmmp/DevTools.git /tmp/DevTools
           ls -la /tmp/DevTools/src/ConsoleScript.php
