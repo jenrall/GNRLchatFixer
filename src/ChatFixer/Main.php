@@ -19,7 +19,11 @@ class Main extends PluginBase implements Listener
     /** @var array<string> */
     private array $blockedPatterns = [];
 
-    private int $duplicateWindow = 5;
+    /** @var array<string> */
+    private array $consoleNames = [];
+
+    private int $duplicateWindow = 10;
+    private bool $blockConsole = true;
 
     public function onEnable(): void
     {
@@ -28,7 +32,18 @@ class Main extends PluginBase implements Listener
         $config = $this->getConfig();
 
         $this->blockedPatterns = $config->get("blocked-patterns", []);
-        $this->duplicateWindow = (int) $config->get("duplicate-window-seconds", 5);
+        $this->duplicateWindow = (int) $config->get("duplicate-window-seconds", 10);
+        $this->blockConsole = (bool) $config->get("block-console-messages", true);
+        $this->consoleNames = $config->get("console-sender-names", [
+            "",
+            "CONSOLE",
+            "Console",
+            "console",
+            "Server",
+            "SERVER",
+            "System",
+            "SYSTEM",
+        ]);
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
 
@@ -38,7 +53,7 @@ class Main extends PluginBase implements Listener
             public function onRun(): void { $this->plugin->cleanupCache(); }
         }, 400);
 
-        $this->getLogger()->info("ChatFixer enabled!");
+        $this->getLogger()->info("ChatFixer enabled! Console blocking: " . ($this->blockConsole ? "ON" : "OFF"));
     }
 
     public function cleanupCache(): void
@@ -67,7 +82,6 @@ class Main extends PluginBase implements Listener
                 continue;
             }
 
-            // فقط chat و translation و popup
             if ($packet->type !== TextPacket::TYPE_CHAT
                 && $packet->type !== TextPacket::TYPE_TRANSLATION
                 && $packet->type !== TextPacket::TYPE_POPUP
@@ -79,27 +93,33 @@ class Main extends PluginBase implements Listener
             $message = $packet->message;
             $senderName = $packet->sourceName ?? "";
 
-            // ⭐ چک اصلی: اگه پیام از طرف بازیکن باشه، هرگز مسدود نکن
+            // ⭐ اگه از بازیکن آنلاین بود، هیچوقت مسدود نکن
             if ($this->isFromPlayer($senderName)) {
                 $newPackets[] = $packet;
                 continue;
             }
 
-            // ⭐ از اینجا به بعد یعنی پیام از سرور/سیستمه → فیلترش کن
+            // ⭐ اگه از کنسول بود و بلاک کنسول فعاله، بررسی کن
+            $isConsoleMessage = $this->isFromConsole($senderName);
 
-            // چک الگوهای مسدود
+            // چک الگوهای مسدود (فقط روی پیام‌های سرور/کنسول)
             if ($this->matchesBlockedPattern($message)) {
                 $modified = true;
                 continue;
             }
 
-            // چک تکراری بودن پیام‌های سرور
+            // ⭐ اگه کنسول هست و آپشن فعاله، همیشه پیام‌های کنسول رو مسدود کن
+            if ($this->blockConsole && $isConsoleMessage) {
+                $modified = true;
+                continue;
+            }
+
+            // ⭐ پیام‌های سرور (نه کنسول، نه بازیکن) → چک تکراری
             $hash = md5($message);
 
             if (isset($this->recentServerMessages[$hash])) {
                 $elapsed = time() - $this->recentServerMessages[$hash];
                 if ($elapsed < $this->duplicateWindow) {
-                    // پیام تکراری سرور → مسدودش کن
                     $modified = true;
                     continue;
                 }
@@ -114,28 +134,33 @@ class Main extends PluginBase implements Listener
         }
     }
 
-    /**
-     * بررسی می‌کنه که آیا فرستنده پیام یه بازیکن آنلاینه یا نه
-     */
     private function isFromPlayer(string $senderName): bool
     {
         if ($senderName === "") {
             return false;
         }
 
-        // اگه اسم فرستنده یکی از بازیکن‌های آنلاین باشه → از بازیکنه
         $player = Server::getInstance()->getPlayerExact($senderName);
         if ($player !== null) {
             return true;
         }
 
-        // اگه اسم فرستنده با یکی از بازیکن‌ها مطابقت داشته باشه (case-insensitive)
         foreach (Server::getInstance()->getOnlinePlayers() as $onlinePlayer) {
             if (strcasecmp($onlinePlayer->getName(), $senderName) === 0) {
                 return true;
             }
         }
 
+        return false;
+    }
+
+    private function isFromConsole(string $senderName): bool
+    {
+        foreach ($this->consoleNames as $name) {
+            if (strcasecmp($name, $senderName) === 0) {
+                return true;
+            }
+        }
         return false;
     }
 
